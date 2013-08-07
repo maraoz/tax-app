@@ -149,7 +149,7 @@ class RetrieveTaxHandler(webapp2.RequestHandler):
             
             buf = StringIO()
             doc = canvas.Canvas(buf)
-            doc.drawString(100,750,"Welcome to Reportlab!")
+            doc.drawString(100,750,output)
             doc.save()
     
             
@@ -157,7 +157,7 @@ class RetrieveTaxHandler(webapp2.RequestHandler):
             subject = "Your taxapp report"
             body = """Please find attached your TaxMyBitcoin report.\n\n"""
             body += output
-            mail.send_mail(sender_address, work.email, subject, body, attachments=[('output.pdf', str(buf))])
+            mail.send_mail(sender_address, work.email, subject, body, attachments=[('output.pdf', buf.getvalue())])
 
         else:
             self.response.out.write("You haven't yet paid.")
