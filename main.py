@@ -7,6 +7,10 @@ from StringIO import StringIO
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter, A4
 from reportlab.lib.units import inch
+from reportlab.lib.enums import TA_JUSTIFY
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
 
 
 import webapp2
@@ -148,9 +152,14 @@ class RetrieveTaxHandler(webapp2.RequestHandler):
             self.response.out.write(output.replace("\n", "<br />"))
             
             buf = StringIO()
-            doc = canvas.Canvas(buf)
-            doc.drawString(100,750,output)
-            doc.save()
+            doc = SimpleDocTemplate(buf)
+            #doc.drawString(100,750,output)
+            styles=getSampleStyleSheet()
+            story = []
+            for line in output.split("\n"):
+                story.append(Paragraph(line, styles["Normal"]))
+            doc.build(story)
+            #doc.save()
     
             
             sender_address = "Taxapp <manuelaraoz@gmail.com>"
