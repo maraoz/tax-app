@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Bitcoin Tax App</title>
+<meta name="description" content="Bitcoin Tax App">
+<link rel="stylesheet" href="./css/bootstrap.css" media="screen">
+<script src="http://code.jquery.com/jquery.js"></script>
+<!--[if lt IE 9]>
+		  <script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+		  <![endif]-->
+</head>
+<body>
+
+	<div class="navbar navbar-inverse navbar-fixed-top">
+		<div class="container">
+			<button type="button" class="navbar-toggle" data-toggle="collapse"
+				data-target=".nav-collapse">
+				<span class="icon-bar"></span> <span class="icon-bar"></span> <span
+					class="icon-bar"></span>
+			</button>
+			<a class="navbar-brand" href="#">Project name</a>
+			<div class="nav-collapse collapse">
+				<ul class="nav navbar-nav">
+					<li class="active"><a href="#">Home</a></li>
+				</ul>
+			</div>
+		</div>
+	</div>
+
+	<div class="container" style="padding-top: 58px;">
+		<div class="row">
+			<form method='post' enctype="multipart/form-data">
+				Enter up to 50 bitcoin addresses here, separated by newlines or
+				commas. If you enter more than one, a fee of 0.02 for the service is
+				charged.<br />
+				<textarea name='addresses'></textarea>
+
+				<p>OR</p>
+				<br /> Upload a .csv from your bitcoin wallet<br />
+				<textarea name='csv'></textarea>
+				<input type="file" name="file" id="file"><br />
+				<p>Please provide us an email address to send the results</p>
+				E-mail: <input type="email" name="email" value="manuelaraoz@gmail.com"><br />
+				<br /> <input type="submit" />
+			</form>
+		</div>
+	</div>
+	<script src="js/bootstrap.min.js"></script>
+	<script src="js/respond.js"></script>
+
+</body>
+</html>
+
+
