@@ -3,6 +3,11 @@ import urllib
 import json
 import datetime
 import random
+from StringIO import StringIO
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter, A4
+from reportlab.lib.units import inch
+
 
 import webapp2
 import jinja2
@@ -141,11 +146,18 @@ class RetrieveTaxHandler(webapp2.RequestHandler):
                 self.print_csv_magic(work)
             
             self.response.out.write(output.replace("\n", "<br />"))
+            
+            buf = StringIO()
+            doc = canvas.Canvas(buf)
+            doc.drawString(100,750,"Welcome to Reportlab!")
+            doc.save()
+    
+            
             sender_address = "Taxapp <manuelaraoz@gmail.com>"
             subject = "Your taxapp report"
             body = """Please find attached your TaxMyBitcoin report.\n\n"""
             body += output
-            mail.send_mail(sender_address, work.email, subject, body)
+            mail.send_mail(sender_address, work.email, subject, body, attachments=[('output.pdf', str(buf))])
 
         else:
             self.response.out.write("You haven't yet paid.")
