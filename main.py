@@ -11,6 +11,9 @@ from reportlab.lib.enums import TA_JUSTIFY
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
+import xlwt
+import datetime
+ezxf = xlwt.easyxf
 
 
 import webapp2
@@ -47,9 +50,10 @@ class TaxHandler(webapp2.RequestHandler):
             return
         
         email = self.request.get("email")
+        export_format = self.request.get("export_format")
         newaddress = result.content
 
-        work = WorkRequest(identifier=newaddress, email=email)
+        work = WorkRequest(identifier=newaddress, email=email, export_format=export_format)
         work.addresses = []
         work.csv = ""
 
@@ -151,21 +155,30 @@ class RetrieveTaxHandler(webapp2.RequestHandler):
             self.response.out.write(output.replace("\n", "<br />"))
             
             buf = StringIO()
-            doc = SimpleDocTemplate(buf)
-            # doc.drawString(100,750,output)
-            styles = getSampleStyleSheet()
-            story = []
-            for line in output.split("\n"):
-                story.append(Paragraph(line, styles["Normal"]))
-            doc.build(story)
-            # doc.save()
+            format = work.export_format
+            if format == "pdf":
+                doc = SimpleDocTemplate(buf)
+                styles = getSampleStyleSheet()
+                story = []
+                for line in output.split("\n"):
+                    story.append(Paragraph(line, styles["Normal"]))
+                doc.build(story)
+            if format == "xls":
+                book = xlwt.Workbook()
+                sheet = book.add_sheet("Tax app report")
+                sheet.set_panes_frozen(True) # frozen headings instead of split panes
+                sheet.set_remove_splits(True) # if user does unfreeze, don't leave a split there
+                for rowx, line in enumerate(output.split("\n")):
+                    for colx, value in enumerate(line.split(",")):
+                        sheet.write(rowx, colx, value)
+                book.save(buf)
     
             
             sender_address = "Taxapp <manuelaraoz@gmail.com>"
             subject = "Your taxapp report"
             body = """Please find attached your TaxMyBitcoin report.\n\n"""
             body += output
-            mail.send_mail(sender_address, work.email, subject, body, attachments=[('output.pdf', buf.getvalue())])
+            mail.send_mail(sender_address, work.email, subject, body, attachments=[('output.'+format, buf.getvalue())])
 
         else:
             self.response.out.write("You haven't yet paid.")
@@ -296,4 +309,4 @@ datab = {1343692800: 9.244873049709, 1349222400: 12.835522979425, 1371340800: 99
 app = webapp2.WSGIApplication([
     ('/', TaxHandler),
     ('/([^/]+)?', RetrieveTaxHandler)
-], debug=False)
+], debug=True)
