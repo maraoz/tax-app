@@ -28,7 +28,6 @@ JINJA_ENVIRONMENT = jinja2.Environment(
     loader=jinja2.FileSystemLoader(os.path.dirname(__file__)),
     extensions=['jinja2.ext.autoescape'])
 
-taxtemplate = JINJA_ENVIRONMENT.get_template('main.html')
 
 master_address = "1NwGkjiksHyJ5J8RYBGkFPZhSyGpki1Dv7"
 
@@ -36,7 +35,7 @@ _cost = 2000000  # 0.02 btc
 
 class TaxHandler(webapp2.RequestHandler):
     def get(self):
-        self.response.out.write(taxtemplate.render({}))
+        self.response.out.write(JINJA_ENVIRONMENT.get_template('main.html').render({}))
 
     def post(self):
         url = 'http://btc-fork-api.appspot.com/new?cases={"%s":"default"}' % master_address
@@ -131,7 +130,7 @@ class RetrieveTaxHandler(webapp2.RequestHandler):
                         if tx["delta_btc"] > 0:
                             btc_in += tx["delta_btc"]
                         else:
-                            usd_out += abs(tx["delta_btc"])
+                            btc_out += abs(tx["delta_btc"])
                         if tx["delta_usd"] > 0:
                             usd_in += tx["delta_usd"]
                         else:
@@ -153,13 +152,13 @@ class RetrieveTaxHandler(webapp2.RequestHandler):
             
             buf = StringIO()
             doc = SimpleDocTemplate(buf)
-            #doc.drawString(100,750,output)
-            styles=getSampleStyleSheet()
+            # doc.drawString(100,750,output)
+            styles = getSampleStyleSheet()
             story = []
             for line in output.split("\n"):
                 story.append(Paragraph(line, styles["Normal"]))
             doc.build(story)
-            #doc.save()
+            # doc.save()
     
             
             sender_address = "Taxapp <manuelaraoz@gmail.com>"
@@ -257,12 +256,14 @@ class RetrieveTaxHandler(webapp2.RequestHandler):
                         delta_usd = float('%.2f' % (exchange * delta_btc))
                         which_addr = self.which_is_it(json.dumps(tx), data.addresses)
                         # output[which_addr].append([date, delta_btc, delta_usd, exchange])
-                        output[which_addr].append({
-                                                   "date":date,
-                                                   "delta_btc": delta_btc,
-                                                   "delta_usd": delta_usd,
-                                                   "exchange" : exchange
-                                                   })
+                        new_tx = {
+                                   "date":date,
+                                   "delta_btc": delta_btc,
+                                   "delta_usd": delta_usd,
+                                   "exchange" : exchange
+                                   }
+                        #self.response.out.write(str(new_tx)+"<br/>")
+                        output[which_addr].append(new_tx)
 
                 curr += 50
                 if json.loads(res.content)['wallet']['n_tx'] < curr:
