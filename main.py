@@ -1,7 +1,6 @@
 import os
 import urllib
 import json
-import datetime
 import random
 from StringIO import StringIO
 from reportlab.pdfgen import canvas
@@ -13,6 +12,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 import xlwt
 import datetime
+import time
 ezxf = xlwt.easyxf
 
 
@@ -73,12 +73,13 @@ class TaxHandler(webapp2.RequestHandler):
                 self.response.out.write("Error, too many addresses. Please split up into multiple requests.")
                 return
 
-        elif len(self.request.get("csv")) > 3:
-
-            work.csv = self.request.get("csv")
-
         else:
-            self.response.out.write("Error, nothing entered.")
+            csv = self.request.get("file")
+            if len(csv) > 3:
+                work.csv = csv
+            else:
+                self.response.out.write("Error, nothing entered.")
+                return
 
         work.identifier = work.identifier
 
@@ -114,60 +115,61 @@ class RetrieveTaxHandler(webapp2.RequestHandler):
         else:
             val = 12312893012839012839120
         
-        # FIXME for now no need to pay
+        # FIXME for now no need to pay, to test
         val = 123456789
         
         # output work
         output = ""
         if val >= _cost:
+            d = []
             if len(work.addresses) > 0:
                 d = self.magic(work)
-
-                # if isinstance(d, str) or isinstance(d, unicode):
-                #    return self.response.out.write(d)
-
-                for addr in d.keys():
-                    output += addr + "\n"
-                    output += "Date,BTC,USD value at time of payment,USD exchange rate at time of payment\n"
-                    btc_in, btc_out, usd_in, usd_out = 0, 0, 0, 0
-                    for tx in d[addr]:
-                        if tx["delta_btc"] > 0:
-                            btc_in += tx["delta_btc"]
-                        else:
-                            btc_out += abs(tx["delta_btc"])
-                        if tx["delta_usd"] > 0:
-                            usd_in += tx["delta_usd"]
-                        else:
-                            usd_out += abs(tx["delta_usd"])
-                        output += datetime.datetime.fromtimestamp(int(tx["date"])).strftime('%Y-%b-%d %I:%M%p') + ","
-                        output += str(tx["delta_btc"]) + "," 
-                        output += str(tx["delta_usd"]) + "," 
-                        output += ("%.2f" % tx["exchange"]) + "\n"
-
-                    output += "Total BTC In,%f\n" % btc_in
-                    output += "Total BTC Out,%f\n" % btc_out
-                    output += "Total USD In,%f\n" % usd_in
-                    output += "Total USD Out,%f\n" % usd_out
-                    output += "\n"
             else:
-                self.print_csv_magic(work)
+                d = self.csv_magic(work)
+
+            if isinstance(d, str) or isinstance(d, unicode):
+                return self.response.out.write(d)
+
+            for addr in d.keys():
+                output += addr + "\n"
+                output += "Date,BTC,USD value at time of payment,USD exchange rate at time of payment\n"
+                btc_in, btc_out, usd_in, usd_out = 0, 0, 0, 0
+                for tx in d[addr]:
+                    if tx["delta_btc"] > 0:
+                        btc_in += tx["delta_btc"]
+                    else:
+                        btc_out += abs(tx["delta_btc"])
+                    if tx["delta_usd"] > 0:
+                        usd_in += tx["delta_usd"]
+                    else:
+                        usd_out += abs(tx["delta_usd"])
+                    output += datetime.datetime.fromtimestamp(int(tx["date"])).strftime('%Y-%b-%d %I:%M%p') + ","
+                    output += str(tx["delta_btc"]) + "," 
+                    output += str(tx["delta_usd"]) + "," 
+                    output += ("%.2f" % tx["exchange"]) + "\n"
+
+                output += "Total BTC In,%f\n" % btc_in
+                output += "Total BTC Out,%f\n" % btc_out
+                output += "Total USD In,%f\n" % usd_in
+                output += "Total USD Out,%f\n" % usd_out
+                output += "\n"
             
             self.response.out.write(output.replace("\n", "<br />"))
             
             buf = StringIO()
-            format = work.export_format
-            if format == "pdf":
+            fmt = work.export_format
+            if fmt == "pdf":
                 doc = SimpleDocTemplate(buf)
                 styles = getSampleStyleSheet()
                 story = []
                 for line in output.split("\n"):
                     story.append(Paragraph(line, styles["Normal"]))
                 doc.build(story)
-            if format == "xls":
+            if fmt == "xls":
                 book = xlwt.Workbook()
                 sheet = book.add_sheet("Tax app report")
-                sheet.set_panes_frozen(True) # frozen headings instead of split panes
-                sheet.set_remove_splits(True) # if user does unfreeze, don't leave a split there
+                sheet.set_panes_frozen(True)
+                sheet.set_remove_splits(True)
                 for rowx, line in enumerate(output.split("\n")):
                     for colx, value in enumerate(line.split(",")):
                         sheet.write(rowx, colx, value)
@@ -178,66 +180,59 @@ class RetrieveTaxHandler(webapp2.RequestHandler):
             subject = "Your taxapp report"
             body = """Please find attached your TaxMyBitcoin report.\n\n"""
             body += output
-            mail.send_mail(sender_address, work.email, subject, body, attachments=[('output.'+format, buf.getvalue())])
+            mail.send_mail(sender_address, work.email, subject, body, attachments=[('output.' + fmt, buf.getvalue())])
 
         else:
             self.response.out.write("You haven't yet paid.")
 
-    def print_csv_magic(self, data):
-
-        self.response.out.write("Date,Transaction ID,#Conf,Wallet ID,Wallet Name,Total Credit (BTC),Total Debit (BTC),Fee (BTC),Comment,USD transacted,USD/BTC,Fee in USD\n")
+    def csv_magic(self, data):
+        output = {}
+        # self.response.out.write("Date,Transaction ID,#Conf,Wallet ID,Wallet Name,Total Credit (BTC),Total Debit (BTC),Fee (BTC),Comment,USD transacted,USD/BTC,Fee in USD\n")
 
         lines = data.csv.split("\n")
         # ignore header
-        if "Total Credit" in lines[0]:
+        if '"Confirmed","Date","Type","Label","Address","Amount","ID"'.replace('"' , '') in lines[0]:
             del lines[0]
-
-        totals = [[0, 0], [0, 0]]
-
-        if len(lines) == 1:
-            lines = data.csv.split("\\n")
 
         for line in lines:
             line = line.replace("\r", "").replace('"', "")
             if len(line.rstrip()) == 0:
                 continue
             spl = line.split(",")
+            if len(spl) != 7:
+                return "Invalid CSV format"
+            
+            # Confirmed    Date    Type    Label    Address    Amount    ID
+            addr = spl[4]
+            try:
+                date = datetime.datetime.strptime(spl[1], "%Y-%b-%d %I:%M%p")
+                date = time.mktime(date.timetuple())
+            except ValueError, e:
+                return "Invalid date stamp: %s - %s - %s" % (datetime.datetime.now().strftime("%Y-%b-%d %I:%M%p"), spl[1], e)
 
             try:
-                time = datetime.datetime.strptime(spl[0], "%Y-%b-%d %I:%M%p").strftime("%s")
+                ammount = float(spl[5].rstrip() or 0)
             except ValueError:
-                return self.response.out.write("Invalid date stamp: %s" % line)
-
-            try:
-                g_in = float(spl[5].rstrip() or 0)
-                g_out = float(spl[6].rstrip() or 0)
-                fee = abs(float(spl[7].rstrip() or 0))
-            except ValueError:
-                return self.response.out.write("error: input/output values incorrect %s\n\n %s" % (line, lines))
-
-            number = g_in + g_out
-            usd_price = self.get_price_day(time)
-            usd_fee = str(('%.2f' % (usd_price * fee)) or "")
-
-            usd = usd_price * number
-
-            if g_in > 0:
-                totals[0][0] += g_in
-            else:
-                totals[0][1] += abs(g_out)
-            if usd > 0:
-                totals[1][0] += usd
-            else:
-                totals[1][1] += abs(usd)
-
-
-            self.response.out.write(line + ",%.2f,%.2f,%s\n" % (usd, usd_price, usd_fee))
-
-        self.response.out.write("Total BTC In,%f\n" % totals[0][0])
-        self.response.out.write("Total BTC Out,%f\n" % totals[0][1])
-        self.response.out.write("Total USD In,%f\n" % totals[1][0])
-        self.response.out.write("Total USD Out,%f\n" % totals[1][1])
-        self.response.out.write("\n")
+                return "error: input/output values incorrect %s" % (line)
+            tx_type = spl[2]
+            delta_btc = ammount if tx_type == "Received with" else -ammount 
+            
+            exchange = self.get_price_day(date)
+            delta_usd = float('%.2f' % (exchange * delta_btc))
+            which_addr = "Bitcoin-qt wallet"
+            new_tx = {
+                       "date":date,
+                       "delta_btc": delta_btc,
+                       "delta_usd": delta_usd,
+                       "exchange" : exchange
+                       }
+            # self.response.out.write(str(new_tx) + "<br/>")
+            l = output.get(which_addr, [])
+            l.append(new_tx)
+            output[which_addr] = l
+            
+        return output
+            
 
     def magic(self, data):
         output = {}
@@ -275,7 +270,7 @@ class RetrieveTaxHandler(webapp2.RequestHandler):
                                    "delta_usd": delta_usd,
                                    "exchange" : exchange
                                    }
-                        #self.response.out.write(str(new_tx)+"<br/>")
+                        # self.response.out.write(str(new_tx)+"<br/>")
                         output[which_addr].append(new_tx)
 
                 curr += 50
