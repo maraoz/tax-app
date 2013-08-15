@@ -2,6 +2,7 @@ import os
 import urllib
 import json
 import random
+import csv
 from StringIO import StringIO
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter, A4
@@ -77,6 +78,7 @@ class TaxHandler(webapp2.RequestHandler):
             csv = self.request.get("file")
             if len(csv) > 3:
                 work.csv = csv
+                work.csv_format = self.request.get("csv_format")
             else:
                 self.response.out.write("Error, nothing entered.")
                 return
@@ -187,49 +189,72 @@ class RetrieveTaxHandler(webapp2.RequestHandler):
 
     def csv_magic(self, data):
         output = {}
-        # self.response.out.write("Date,Transaction ID,#Conf,Wallet ID,Wallet Name,Total Credit (BTC),Total Debit (BTC),Fee (BTC),Comment,USD transacted,USD/BTC,Fee in USD\n")
-
         lines = data.csv.split("\n")
-        # ignore header
-        if '"Confirmed","Date","Type","Label","Address","Amount","ID"'.replace('"' , '') in lines[0]:
+
+        # ignore headers
+        if data.csv_format == "bitcoin-qt":
+            del lines[0]
+        elif data.csv_format == "armory":
+            while not "Fee (wallet paid)" in lines[0]:
+                del lines[0]
             del lines[0]
 
-        for line in lines:
-            line = line.replace("\r", "").replace('"', "")
-            if len(line.rstrip()) == 0:
+        for line_n, spl in enumerate(csv.reader(lines, skipinitialspace=True)):
+            if len(spl) == 0:
                 continue
-            spl = line.split(",")
-            if len(spl) != 7:
-                return "Invalid CSV format"
+            line = ",".join(spl)
             
-            # Confirmed    Date    Type    Label    Address    Amount    ID
-            addr = spl[4]
-            try:
-                date = datetime.datetime.strptime(spl[1], "%Y-%b-%d %I:%M%p")
-                date = time.mktime(date.timetuple())
-            except ValueError, e:
-                return "Invalid date stamp: %s - %s - %s" % (datetime.datetime.now().strftime("%Y-%b-%d %I:%M%p"), spl[1], e)
+            # check CSV format is OK
+            if data.csv_format == "bitcoin-qt":
+                if len(spl) != 7:
+                    return "Invalid bitcoin-qt CSV format: %s values at line %s" % (len(spl), line_n)
+            elif data.csv_format == "armory":
+                if len(spl) != 9:
+                    return "Invalid Armory CSV format: %s values at line %s" % (len(spl), line_n)
+                
+            # extract important values
+            if data.csv_format == "bitcoin-qt":
+                try:
+                    qt_date = "%Y-%m-%dT%H:%M:%S" # 2013-08-13T22:35:50
+                    date_str = spl[1]
+                    date = datetime.datetime.strptime(date_str, qt_date)
+                    date = time.mktime(date.timetuple())
+                except ValueError, e:
+                    return "Invalid date stamp: %s - %s - %s" % (datetime.datetime.now().strftime(qt_date), date_str, e)
+                try:
+                    delta_btc = float(spl[5].rstrip() or 0)
+                except ValueError:
+                    return "error: input/output values incorrect %s" % (line)
+                addr = "Bitcoin-qt wallet"
+                
+            elif data.csv_format == "armory":
+                try:
+                    armory_date = "%Y-%b-%d %I:%M%p" # 2013-Aug-13 09:46am
+                    date_str = spl[0]
+                    date = datetime.datetime.strptime(date_str, armory_date)
+                    date = time.mktime(date.timetuple())
+                except ValueError, e:
+                    return "Invalid date stamp: %s - %s - %s" % (datetime.datetime.now().strftime(armory_date), date_str, e)
+                try:
+                    delta_btc = float(spl[5].rstrip() or 0) + float(spl[6].rstrip() or 0) + float(spl[7].rstrip() or 0) 
+                except ValueError:
+                    return "error: input/output values incorrect %s" % (line)
+                addr = spl[4]
 
-            try:
-                ammount = float(spl[5].rstrip() or 0)
-            except ValueError:
-                return "error: input/output values incorrect %s" % (line)
-            tx_type = spl[2]
-            delta_btc = ammount if tx_type == "Received with" else -ammount 
+            
             
             exchange = self.get_price_day(date)
             delta_usd = float('%.2f' % (exchange * delta_btc))
-            which_addr = "Bitcoin-qt wallet"
             new_tx = {
-                       "date":date,
-                       "delta_btc": delta_btc,
-                       "delta_usd": delta_usd,
-                       "exchange" : exchange
-                       }
+               "date":date,
+               "delta_btc": delta_btc,
+               "delta_usd": delta_usd,
+               "exchange" : exchange
+           }
             # self.response.out.write(str(new_tx) + "<br/>")
-            l = output.get(which_addr, [])
+            l = output.get(addr, [])
             l.append(new_tx)
-            output[which_addr] = l
+            output[addr] = l
             
         return output
             

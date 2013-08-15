@@ -7,6 +7,7 @@ class WorkRequest(db.Model):
     
     addresses = db.StringListProperty()
     csv = db.TextProperty()
+    csv_format = db.StringProperty()
     
     @classmethod
     def from_id(cls, identifier):
