@@ -190,9 +190,11 @@ class RetrieveTaxHandler(webapp2.RequestHandler):
     def csv_magic(self, data):
         output = {}
         lines = data.csv.split("\n")
+        
+        electrum_balance = None
 
         # ignore headers
-        if data.csv_format == "bitcoin-qt":
+        if data.csv_format in ["bitcoin-qt", "electrum" ]:
             del lines[0]
         elif data.csv_format == "armory":
             while not "Fee (wallet paid)" in lines[0]:
@@ -211,6 +213,10 @@ class RetrieveTaxHandler(webapp2.RequestHandler):
             elif data.csv_format == "armory":
                 if len(spl) != 9:
                     return "Invalid Armory CSV format: %s values at line %s" % (len(spl), line_n)
+            elif data.csv_format == "electrum":
+                # transaction_hash,label,confirmations,value,fee,balance,timestamp
+                if len(spl) != 7:
+                    return "Invalid Electrum CSV format: %s values at line %s" % (len(spl), line_n)
                 
             # extract important values
             if data.csv_format == "bitcoin-qt":
@@ -240,6 +246,25 @@ class RetrieveTaxHandler(webapp2.RequestHandler):
                 except ValueError:
                     return "error: input/output values incorrect %s" % (line)
                 addr = spl[4]
+                
+            elif data.csv_format == "electrum":
+                try:
+                    electrum_date = "%Y-%m-%d %H:%M" # 2013-08-20 15:43
+                    date_str = spl[6]
+                    date = datetime.datetime.strptime(date_str, electrum_date)
+                    date = time.mktime(date.timetuple())
+                except ValueError, e:
+                    return "Invalid date stamp: %s - %s - %s" % (datetime.datetime.now().strftime(electrum_date), date_str, e)
+                try:
+                    updated_balance = float(spl[5].rstrip() or 0)
+                    if not electrum_balance:
+                        delta_btc = updated_balance
+                    else: 
+                        delta_btc = updated_balance - electrum_balance
+                    electrum_balance = updated_balance  
+                except ValueError:
+                    return "error: input/output values incorrect %s" % (line)
+                addr = "electrum"
 
             
             
