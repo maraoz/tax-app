@@ -1,63 +1,69 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-	<meta charset="utf-8">
-	<title>Bitcoin Tax App</title>
-	<meta name="description" content="Bitcoin Tax App">
-	<link href="/css/bootstrap.css" rel="stylesheet">
-	<link href="../assets/css/bootstrap-responsive.css" rel="stylesheet">
-	<script src="http://code.jquery.com/jquery.js"></script>
-	<!--[if lt IE 9]>
+<meta charset="utf-8">
+<title>Bitcoin Tax App</title>
+<meta name="description" content="Bitcoin Tax App">
+<link href="/css/bootstrap.css" rel="stylesheet">
+<link href="../assets/css/bootstrap-responsive.css" rel="stylesheet">
+<script src="http://code.jquery.com/jquery.js"></script>
+<!--[if lt IE 9]>
 			  <script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
 			  <![endif]-->
 </head>
 <body>
-	
-      <div class="navbar navbar-inverse navbar-fixed-top">
-      <div class="navbar-inner">
-        <div class="container">
-          <a class="brand" href="#">Bitcoin Tax App</a>
-          <div class="nav-collapse collapse">
-            <ul class="nav">
-              <li class="active"><a href="#">Home</a></li>
-            </ul>
-          </div>
-        </div>
-      </div>
-    </div>
+
+	<div class="navbar navbar-inverse navbar-fixed-top">
+		<div class="navbar-inner">
+			<div class="container">
+				<a class="brand" href="#">Bitcoin Tax App</a>
+				<div class="nav-collapse collapse">
+					<ul class="nav">
+						<li class="active"><a href="#">Home</a></li>
+					</ul>
+				</div>
+			</div>
+		</div>
+	</div>
 
 	<div class="container" style="padding-top: 58px;">
-			<form method='post' enctype="multipart/form-data">
-				<div class="row">
-					<div class="span6">
-						Enter up to 50 bitcoin addresses here, separated by newlines or
-						commas. If you enter more than one, a fee of 0.02 for the service is
-						charged.<br />
-						<textarea name='addresses'></textarea>
-					</div>
-	
-					<div class="span6">
-						OR
-						<br /> Upload a .csv from your bitcoin wallet, and specify the format.<br />
-						<input type="file" name="file" id="file" class=""><br />
-						<input type="radio" checked name="csv_format" value="bitcoin-qt">Bitcoin-QT<br>
-						<input type="radio" name="csv_format" value="armory">Armory<br>
-						<input type="radio" name="csv_format" value="electrum">Electrum<br>
-					</div>
+		<form method='post' enctype="multipart/form-data">
+			<div class="row">
+				<div class="span6">
+					Enter up to 50 bitcoin addresses here, separated by newlines or
+					commas. If you enter more than one, a fee of 0.02 for the service
+					is charged.<br />
+					<textarea style="width:90%;" name='addresses'>1manu5kamL3T8eQQMweW8LHkEdy47Cexu</textarea>
 				</div>
-				<hr />
-				<div class="row">
-					<div class="span2"></div>
-					<div class="span6">
-						<p>And please provide us an email address to send the results</p>
-						<input type="email" name="email" value="manuelaraoz@gmail.com"><br />
-						Send in format: <br /> 
-						<input type="radio" checked name="export_format" value="xls">Excel<br>
-						<input type="radio" name="export_format" value="pdf">PDF
-						<br /> <input class="btn btn-success" type="submit" />
-					</div>
-				</div>	
-			</form>
+
+				<div class="span6">
+					OR <br /> Upload a .csv from your bitcoin wallet, and specify the
+					format.<br /> <input type="file" name="file" id="file" class=""><br />
+					<input type="radio" checked name="csv_format" value="bitcoin-qt">Bitcoin-QT<br>
+					<input type="radio" name="csv_format" value="armory">Armory<br>
+					<input type="radio" name="csv_format" value="electrum">Electrum<br>
+				</div>
+			</div>
+			<hr />
+			<div class="row">
+				<div class="span4">
+					<label>Chose your tax currency:</label> <select name="symbol">
+						<option value="USD">USD</option>
+						<option value="EUR">EUR</option>
+						<option value="GBP">GBP</option>
+					</select>
+				</div>
+				<div class="span6">
+					<p>And please provide us an email address to send the results</p>
+					<input type="email" name="email" value="manuelaraoz@gmail.com"><br />
+					Send in format: <br /> 
+					<input type="radio" checked	name="export_format" value="web">Web only<br />
+					<input type="radio" name="export_format" value="xls">Excel<br />
+					<input type="radio" name="export_format" value="pdf">PDF <br />
+					<input class="btn btn-success" type="submit" />
+				</div>
+			</div>
+		</form>
 	</div>
 	<script src="js/bootstrap.min.js"></script>
 
